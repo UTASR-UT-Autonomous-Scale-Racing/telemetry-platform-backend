@@ -1,0 +1,32 @@
+# Node dependencies and logs
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Build output and caches
+dist
+coverage
+.nyc_output
+*.tsbuildinfo
+
+# VCS and editor cruft
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment files (do not send secrets to build context)
+.env
+.env.*
+
+# Local logs and misc
+logs
+
+# Compose files are not needed in build context
+docker-compose.yml
