@@ -1,6 +1,15 @@
-import { query } from '../config/postgres.js';
+import prisma from '../services/prismaClient.js';
 
 export async function getUsers() {
-  const res = await query('SELECT id, name, email, created_at FROM users ORDER BY id ASC');
-  return res.rows;
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      createdAt: true,
+    },
+    orderBy: { id: 'asc' },
+  });
+  return users;
 }
