@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { JsonWebTokenError, TokenExpiredError, NotBeforeError } from 'jsonwebtoken';
 import {
   HttpError,
   UnauthorizedError,
@@ -50,17 +49,6 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
       code: i.code,
     }));
     return send(res, status, { error: { type, message, details } });
-  }
-
-  // JWT errors
-  if (err instanceof TokenExpiredError) {
-    return send(res, 401, { error: { type: 'TokenExpiredError', message: err.message } });
-  }
-  if (err instanceof NotBeforeError) {
-    return send(res, 401, { error: { type: 'TokenNotActiveError', message: err.message } });
-  }
-  if (err instanceof JsonWebTokenError) {
-    return send(res, 401, { error: { type: 'JsonWebTokenError', message: err.message } });
   }
 
   // Prisma errors via helper

@@ -20,7 +20,9 @@ export const createUserSchema = z.object({
     message: "Password needs to include a symbol",
   }),
   
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
+
+  role: z.enum(["ADMIN", "TEAM", "VIEWER"])
 })
 .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords need to match",

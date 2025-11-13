@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import { env } from "../config/env.js";
 import "../config/env.js";
 
 export const auth = (
@@ -14,10 +15,10 @@ export const auth = (
     }
 
     try {
-        const secret = process.env.JWT_SECRET || "dev-secret";
-        const decoded = jwt.verify(token, secret);
-        if (typeof decoded !== "string" && (decoded as JwtPayload).id) {
-            res.locals.user = (decoded as JwtPayload).id;
+        const secret = env.jwtSecret;
+        const decoded = jwt.verify(token, secret) as JwtPayload | string;
+        if (typeof decoded !== "string" && decoded.id) {
+            res.locals.user = { id: decoded.id, role: decoded.role };
             return next();
         }
         return res.status(401).json({ message: "Invalid token" });

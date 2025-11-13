@@ -7,7 +7,7 @@ export async function getUsers() {
       firstName: true,
       lastName: true,
       email: true,
-      createdAt: true,
+      createdAt: true
     },
     orderBy: { id: 'asc' },
   });

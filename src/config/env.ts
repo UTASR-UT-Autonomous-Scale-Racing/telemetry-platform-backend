@@ -9,5 +9,6 @@ export const env = {
   influxUrl: process.env.INFLUX_URL || 'http://influxdb:8086',
   influxOrg: process.env.INFLUX_ORG || 'app-org',
   influxBucket: process.env.INFLUX_BUCKET || 'telemetry',
-  influxToken: process.env.INFLUX_TOKEN || 'dev-token'
+  influxToken: process.env.INFLUX_TOKEN || 'dev-token',
+  jwtSecret: process.env.JWT_SECRET || "dev-secret"
 };

@@ -8,16 +8,17 @@ export async function register (req: Request, res: Response, next: NextFunction)
         email,
         password,
         confirmPassword,
+        role
     } = req.body;
     try {
 
-        const token = await registerUser( 
-            firstName,
-            lastName,
-            email,
-            password,
-        );
-
+        const token = await registerUser(
+            firstName, 
+            lastName, 
+            email, 
+            password, 
+            role
+        )
         res.status(200).send({token});
     } catch (err) {
         next(err);
