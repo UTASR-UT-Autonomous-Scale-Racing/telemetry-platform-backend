@@ -10,6 +10,6 @@ export const env = {
   influxOrg: process.env.INFLUX_ORG || 'app-org',
   influxBucket: process.env.INFLUX_BUCKET || 'telemetry',
   influxToken: process.env.INFLUX_TOKEN || 'dev-token',
-  jetsonHost: process.env.JETSON_HOST || 'host.docker.internal',
+  jetsonHost: process.env.JETSON_HOST || ' ',
   jetsonPort: process.env.JETSON_PORT || 5001,
 };
