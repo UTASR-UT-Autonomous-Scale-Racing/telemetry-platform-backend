@@ -1,25 +1,34 @@
 import express from 'express';
-import dotenv from 'dotenv';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import routes from './routes/index.js';
 import { initPostgres } from './config/postgres.js';
 import { initInflux } from './config/influx.js';
 import { notFoundHandler } from './middlewares/notFound.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { requestLogger } from './middlewares/logger.js';
-
-dotenv.config();
+import './config/env.js';
 
 const PORT = Number(process.env.PORT || 8080);
+
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || "http://localhost:8081",
+};
 
 async function start() {
   await initPostgres();
   await initInflux();
 
   const app = express();
+  app.use(cors(corsOptions));
   app.use(express.json());
+  app.use(cookieParser());
+
+  app.use(express.urlencoded({ extended: true }));
+
   app.use(requestLogger);
 
-  app.use('/', routes);
+  app.use('/api/v1/', routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
