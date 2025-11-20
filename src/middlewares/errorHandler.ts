@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import {
-  HttpError,
-  UnauthorizedError,
-} from '../errors/httpErrors.js';
-import { handlePrismaError } from '../errors/prismaErrors.js';
+import { HttpError } from '../errors/httpErrors.js';
 import { handlePgError } from '../errors/pgErrors.js';
 
 type ErrorBody = {
@@ -49,12 +45,6 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
       code: i.code,
     }));
     return send(res, status, { error: { type, message, details } });
-  }
-
-  // Prisma errors via helper
-  {
-    const handled = handlePrismaError(err);
-    if (handled.handled) return send(res, handled.status, handled.body);
   }
 
   // Postgres (pg) errors via helper

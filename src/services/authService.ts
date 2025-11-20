@@ -1,41 +1,35 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import prisma from '../services/prismaClient.js';
+import { query } from '../config/postgres.js';
 import { UnauthorizedError } from "../errors/httpErrors.js";
 import { env } from "../config/env.js"
+import { createRefreshToken, generateAccessToken } from './tokenService.js';
 export async function registerUser(
     firstName: string,
     lastName: string,
     email: string,
     password: string,
-    role: string
+    role?: string
 ) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-        data: {
-            firstName,
-            lastName,
-            email,
-            password: hashedPassword,
-            role: role
-        } as any
-    });
-    return generateToken(user.id, role);
+    const finalRole = role ?? 'VIEWER';
+    const sql = `INSERT INTO users (first_name, last_name, email, password_hash, role)
+                            VALUES ($1,$2,$3,$4,$5) RETURNING id, role`;
+    const result = await query(sql, [firstName, lastName, email, hashedPassword, finalRole]);
+    const row = result.rows[0];
+    const accessToken = generateAccessToken(row.id, row.role);
+    const { refreshToken } = await createRefreshToken(row.id);
+    return { accessToken, refreshToken };
 }
 
 export async function loginUser(email: string, password: string) {
-    const user = await prisma.user.findUnique({
-        where: { email }
-    });
-
-    if(!user || ! await bcrypt.compare(password, user.password)){
+    const sql = `SELECT id, password_hash, role FROM users WHERE email = $1 LIMIT 1`;
+    const result = await query(sql, [email]);
+    const user = result.rows[0];
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
         throw new UnauthorizedError('Invalid email or password');
     }
-    const role = (user as any).role as string; // cast for now until Prisma types are regenerated
-    return generateToken(user.id, role);
-}
-
-function generateToken(userId: number, role: string){
-    const secret = env.jwtSecret;
-    return jwt.sign({ id: userId, role }, secret, { expiresIn: '24h' });
+    const accessToken = generateAccessToken(user.id, user.role);
+    const { refreshToken } = await createRefreshToken(user.id);
+    return { accessToken, refreshToken };
 }

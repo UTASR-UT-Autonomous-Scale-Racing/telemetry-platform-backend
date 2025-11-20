@@ -1,5 +1,6 @@
 import express from 'express';
-import cors from "cors";
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import routes from './routes/index.js';
 import { initPostgres } from './config/postgres.js';
 import { initInflux } from './config/influx.js';
@@ -21,6 +22,7 @@ async function start() {
   const app = express();
   app.use(cors(corsOptions));
   app.use(express.json());
+  app.use(cookieParser());
 
   app.use(express.urlencoded({ extended: true }));
 

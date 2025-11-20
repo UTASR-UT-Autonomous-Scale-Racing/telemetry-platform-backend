@@ -10,5 +10,7 @@ export const env = {
   influxOrg: process.env.INFLUX_ORG || 'app-org',
   influxBucket: process.env.INFLUX_BUCKET || 'telemetry',
   influxToken: process.env.INFLUX_TOKEN || 'dev-token',
-  jwtSecret: process.env.JWT_SECRET || "dev-secret"
+  jwtSecret: process.env.JWT_SECRET || 'dev-secret',
+  accessTokenTtl: process.env.ACCESS_TOKEN_TTL || '15m',
+  refreshTokenTtl: process.env.REFRESH_TOKEN_TTL || '7d'
 };

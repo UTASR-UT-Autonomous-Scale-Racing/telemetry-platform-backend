@@ -8,6 +8,7 @@ function createMockRes() {
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   res.send = jest.fn().mockReturnValue(res);
+  res.cookie = jest.fn().mockReturnValue(res);
   return res as any;
 }
 
@@ -16,9 +17,9 @@ describe('authController', () => {
     jest.restoreAllMocks();
   });
 
-  it('register: returns 200 and token on success', async () => {
-  const token = 'fake.jwt.token';
-  const spy = jest.spyOn(authService, 'registerUser').mockResolvedValue(token as any);
+  it('register: returns 201 and access token, sets cookie', async () => {
+    const tokens = { accessToken: 'fake.jwt.token', refreshToken: 'fake.refresh.token' };
+    const spy = jest.spyOn(authService, 'registerUser').mockResolvedValue(tokens as any);
 
     const req: any = {
       body: {
@@ -35,8 +36,9 @@ describe('authController', () => {
     await register(req, res, next);
 
     expect(spy).toHaveBeenCalledWith('Ada', 'Lovelace', 'ada@example.com', 'SecurePass123!');
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ token });
+  expect(res.status).toHaveBeenCalledWith(201);
+  expect(res.json).toHaveBeenCalledWith({ accessToken: 'fake.jwt.token' });
+  expect(res.cookie).toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -54,9 +56,9 @@ describe('authController', () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
-  it('login: returns 200 and token on success', async () => {
-  const token = 'fake.jwt.token';
-  const spy = jest.spyOn(authService, 'loginUser').mockResolvedValue(token as any);
+  it('login: returns 200 and access token, sets cookie', async () => {
+    const tokens = { accessToken: 'fake.jwt.token', refreshToken: 'fake.refresh.token' };
+    const spy = jest.spyOn(authService, 'loginUser').mockResolvedValue(tokens as any);
 
     const req: any = { body: { email: 'ada@example.com', password: 'SecurePass123!' } };
     const res = createMockRes();
@@ -65,8 +67,9 @@ describe('authController', () => {
     await login(req, res, next);
 
     expect(spy).toHaveBeenCalledWith('ada@example.com', 'SecurePass123!');
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ token });
+  expect(res.status).toHaveBeenCalledWith(200);
+  expect(res.json).toHaveBeenCalledWith({ accessToken: 'fake.jwt.token' });
+  expect(res.cookie).toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
   });
 

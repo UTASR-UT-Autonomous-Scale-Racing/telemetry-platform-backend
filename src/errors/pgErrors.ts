@@ -7,7 +7,6 @@ type PgHandled = {
 type NotHandled = { handled: false };
 
 export function handlePgError(err: any): PgHandled | NotHandled {
-  // Heuristic: pg errors typically have string 'code' and 'routine'
   if (err && typeof err === 'object' && typeof err.code === 'string' && 'routine' in err) {
     const code = err.code as string;
     switch (code) {

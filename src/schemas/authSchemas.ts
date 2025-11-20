@@ -26,3 +26,14 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+// Refresh and logout both require a refresh token in the body
+export const refreshSchema = z.object({
+  refreshToken: z.string().min(20, 'Invalid refresh token')
+});
+export type RefreshInput = z.infer<typeof refreshSchema>;
+
+export const logoutSchema = z.object({
+  refreshToken: z.string().min(20, 'Invalid refresh token')
+});
+export type LogoutInput = z.infer<typeof logoutSchema>;
