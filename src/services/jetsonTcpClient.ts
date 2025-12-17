@@ -11,7 +11,7 @@ class JetsonTcpClient {
 
   private reconnectDelay = 1000; // Start at 1 second cool down delay
   private readonly maxReconnectDelay = 20000; // At most 20 second cool down delay
-  private readonly maxReconnectionDuration = 60000; // Give up trying to reconnect after 10 minutes
+  private readonly maxReconnectionDuration = 60000; // Give up trying to reconnect after 1 minute
   private reconnectionTimer: NodeJS.Timeout | null = null;
   private reconnectionDurationTimer: NodeJS.Timeout | null = null;
 
@@ -28,11 +28,6 @@ class JetsonTcpClient {
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.destroy();
-    }
-
-    if (this.reconnectionDurationTimer) {
-      clearTimeout(this.reconnectionDurationTimer);
-      this.reconnectionDurationTimer = null;
     }
 
     if (this.reconnectionTimer) {
@@ -85,6 +80,7 @@ class JetsonTcpClient {
       console.error('Error closing TCP connection gracefully:', err);
     }
 
+    this.buffer = '';
     this.socket = null;
   }
 
