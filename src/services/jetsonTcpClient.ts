@@ -10,78 +10,55 @@ class JetsonTcpClient {
   private buffer = '';
 
   private reconnectDelay = 1000; // Start at 1 second cool down delay
-  private readonly maxReconnectDelay = 20000; // At most 20 second cool down delay
-  private readonly maxReconnectionDuration = 60000; // Give up trying to reconnect after 1 minute
-  private reconnectionTimer: NodeJS.Timeout | null = null;
-  private reconnectionDurationTimer: NodeJS.Timeout | null = null;
+  private readonly maxReconnectDelay = 20 * 1000; // At most 20 second cool down delay
+  private readonly maxReconnectionDuration = 1 * 60000; // Give up trying to reconnect after 1 minute
+  private reconnectionTimer: NodeJS.Timeout | null = null; // Timer for the reconecting
+  private reconnectionDurationTimer: NodeJS.Timeout | null = null; // Timer for max reconnection time before disconnect
 
   /**
    * Initializes connection to the TCP server
    */
   connect(): void {
-    // Clean everything up to prevent a external call from disrupting the cycle
+    // Prevents the continuation of the method if the socket is open, if needed call disconnect first.
     if (this.socket && this.socket.readyState === 'open') {
       console.log('TCP Already connected.');
       return;
     }
 
+    // Ensuring no communication remains active
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.destroy();
     }
 
-    if (this.reconnectionTimer) {
-      clearTimeout(this.reconnectionTimer);
-      this.reconnectionTimer = null;
-    }
-
-    this.socket = net.connect({
-      host: process.env.JETSON_HOST || 'host.docker.internal', // Change to 'localhost' if local development
-      port: Number(process.env.JETSON_PORT || 5001),
-    });
-
-    // Event Listeners
-    this.socket.on('connect', () => this.handleConnect());
-    this.socket.on('error', (err) => this.handleError(err));
-    this.socket.on('data', (chunk) => this.handleData(chunk));
-    this.socket.on('close', () => this.handleClose());
+    // Resets the timers to default and create the socket
+    this.timerLogicReset();
+    this.createSocket();
   }
 
   /**
    * Terminate the life cycle of the TCP client, will only connect again once the 'connect' method is called
    */
   disconnect(): void {
-    // Clear the reconnection timer if it exists
-    if (this.reconnectionTimer) {
-      clearTimeout(this.reconnectionTimer);
-      this.reconnectionTimer = null;
-    }
+    // Reset Timer Values
+    this.timerLogicReset()
 
-    // Clear the duration reconnection timer
-    if (this.reconnectionDurationTimer) {
-      clearTimeout(this.reconnectionDurationTimer);
-      this.reconnectionDurationTimer = null;
-    }
+    // Ensure Socket is closed
+    if (this.socket){
+      this.socket.removeAllListeners();
 
-    this.buffer = '';
+      try {
+        this.socket.end();
+      } catch (err) {
+        this.socket.destroy();
+        console.error('Error closing TCP connection gracefully:', err);
+      }
 
-    // If both the timer and the socket isnt active,
-    // It should not reconnect again unless connect method is manually called
-    if (!this.socket) return;
-
-    // Process of cleaning the socket
-    this.socket.removeAllListeners();
-
-    // Try closing gracefully
-    try {
-      this.socket.end();
-    } catch (err) {
-      this.socket.destroy();
-      console.error('Error closing TCP connection gracefully:', err);
-    }
+      this.socket = null;
+    };
 
     this.buffer = '';
-    this.socket = null;
+    console.log("TCP Disconnected")
   }
 
   /**
@@ -100,21 +77,42 @@ class JetsonTcpClient {
     }
   }
 
-  private handleConnect(): void {
-    console.log('Connection Established With Jetson TCP server');
-    this.reconnectDelay = 1000; // Delay reset
+  /**
+   * Helper method for creating and setting up listeners for the socket
+   */
+  private createSocket(): void {
+    this.socket = net.connect({
+      host: process.env.JETSON_HOST || 'host.docker.internal',
+      port: Number(process.env.JETSON_PORT || 5001),
+    });
+  
+    // Event Listeners
+    this.socket.on('connect', () => this.handleConnect());
+    this.socket.on('error', (err) => this.handleError(err));
+    this.socket.on('data', (chunk) => this.handleData(chunk));
+    this.socket.on('close', () => this.handleClose());
+  }
 
-    // Clear the timer for reconnection
+  /**
+   * Helper method for reseting all timer logics to default state, while clearing all existing timers
+   */
+  private timerLogicReset(): void {
+    this.reconnectDelay = 1000;
+
     if (this.reconnectionTimer) {
       clearTimeout(this.reconnectionTimer);
       this.reconnectionTimer = null;
     }
 
-    // Clear the timer for max reconnection duration
     if (this.reconnectionDurationTimer) {
       clearTimeout(this.reconnectionDurationTimer);
       this.reconnectionDurationTimer = null;
     }
+  }
+
+  private handleConnect(): void {
+    console.log('Connection Established With Jetson TCP server');
+    this.timerLogicReset();
   }
 
   private handleError(err: Error): void {
@@ -186,7 +184,7 @@ class JetsonTcpClient {
 
     // Set timer to initiate a connection attempt
     this.reconnectionTimer = setTimeout(() => {
-      this.connect();
+      this.createSocket();
 
       // Exponential Backoff
       this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
