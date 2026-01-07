@@ -50,7 +50,7 @@ def generate_frame() -> dict:
 
     return {
         "t": time.time(),
-        "sid": str(uuid.uuid4()),
+        "sid": "Session_1",
         "veh": "car_01",
         "s": round(random.uniform(0.0, 50.0), DECIMAL_RANGE),
         "thr": round(random.uniform(0.0, 1.0), DECIMAL_RANGE),
@@ -59,7 +59,6 @@ def generate_frame() -> dict:
         "y": round(random.uniform(-100.0, 100.0), DECIMAL_RANGE),
         "hdg": round(random.uniform(0.0, 360.0), DECIMAL_RANGE)
     }
-
 
 async def handle_client(_reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
     """Handle a single client connection.

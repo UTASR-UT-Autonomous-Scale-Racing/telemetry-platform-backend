@@ -11,6 +11,7 @@ interface TelemetryFrame {
   x?: number;
   y?: number;
   hdg?: number;
+  serverReceiveTime?: number;
 }
 
 interface ValidateResult {

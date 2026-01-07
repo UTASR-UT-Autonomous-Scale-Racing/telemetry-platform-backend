@@ -4,6 +4,7 @@ import {
   ValidateResult,
   parseAndValidateFrame,
 } from '../validators/telementryValidator';
+import { writeTelemetryFrame } from '../services/influxService';
 
 class JetsonTcpClient {
   private socket: net.Socket | null = null;
@@ -139,10 +140,14 @@ class JetsonTcpClient {
         const completeFrame = {
           ...validationRes.frame,
           serverReceiveTime: Date.now() / 1000,
-        };
-        console.log(chunk);
-
-        console.log(`Result Received: ${completeFrame}`);
+        } as TelemetryFrame;
+        console.log(completeFrame.t, completeFrame.serverReceiveTime)
+        try {
+          writeTelemetryFrame(completeFrame)
+        } catch (err) {
+          console.error('Failed to write telmentry frame to influx DB:', err)
+        }
+        
       } else {
         console.error('Error Validation:', validationRes.error);
       }
