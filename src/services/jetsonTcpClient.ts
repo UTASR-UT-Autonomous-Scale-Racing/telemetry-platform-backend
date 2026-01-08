@@ -11,11 +11,12 @@ class JetsonTcpClient {
   private buffer = '';
 
   private reconnectDelay = 1000; // Start at 1 second cool down delay
-  private readonly maxReconnectDelay = 20 * 1000; // At most 20 second cool down delay
-  private readonly maxReconnectionDuration = 1 * 60000; // Give up trying to reconnect after 1 minute
+  private readonly MAX_RECONNECTION_DELAY = 20 * 1000; // At most 20 second cool down delay
+  private readonly MAX_RECONNECTION_DURATION = 1 * 60000; // Give up trying to reconnect after 1 minute
   private reconnectionTimer: NodeJS.Timeout | null = null; // Timer for the reconecting
   private reconnectionDurationTimer: NodeJS.Timeout | null = null; // Timer for max reconnection time before disconnect
 
+  private readonly MAX_BUFFER_SIZE = 1024 * 1024; // 1MB
   /**
    * Initializes connection to the TCP server
    */
@@ -127,6 +128,12 @@ class JetsonTcpClient {
     // Process complete message
     let boundary = this.buffer.indexOf('\n');
     while (boundary !== -1) {
+      console.log(this.buffer.length)
+      if (this.buffer.length > this.MAX_BUFFER_SIZE) {
+        console.error(`Buffer overflow! Size: ${this.buffer.length}. TCP client disconnecting.`);
+        this.disconnect();
+        return;
+      }
       // Extract Complete Message
       const message = this.buffer.substring(0, boundary);
       this.buffer = this.buffer.substring(boundary + 1);
@@ -141,7 +148,7 @@ class JetsonTcpClient {
           ...validationRes.frame,
           serverReceiveTime: Date.now() / 1000,
         } as TelemetryFrame;
-        console.log(completeFrame.t, completeFrame.serverReceiveTime)
+
         try {
           writeTelemetryFrame(completeFrame)
         } catch (err) {
@@ -172,7 +179,7 @@ class JetsonTcpClient {
     if (!this.reconnectionDurationTimer) {
       this.reconnectionDurationTimer = setTimeout(() => {
         this.disconnect();
-      }, this.maxReconnectionDuration);
+      }, this.MAX_RECONNECTION_DURATION);
     }
 
     // Start to attempt reconnection loop
@@ -192,7 +199,7 @@ class JetsonTcpClient {
       this.createSocket();
 
       // Exponential Backoff
-      this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
+      this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.MAX_RECONNECTION_DELAY);
     }, this.reconnectDelay);
   }
 }
