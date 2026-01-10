@@ -27,9 +27,10 @@ export function writeTelemetryFrame(frame: TelemetryFrame) {
   const point = new Point('telemetry')
     .tag('sessionId', frame.sid)
     .tag('vehicleId', frame.veh || 'unknown')
+    .timestamp(new Date(frame.t * 1000))
 
   Object.entries(frame).forEach(([key, value]) => {
-    if (key !== 'sid' && key !== 'veh' && typeof value === 'number') {
+    if (!['t', 'sid', 'veh'].includes(key) && typeof value === 'number') {
       point.floatField(key, value);
     }
   });
