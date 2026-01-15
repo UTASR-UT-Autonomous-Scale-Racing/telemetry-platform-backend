@@ -128,7 +128,6 @@ class JetsonTcpClient {
     // Process complete message
     let boundary = this.buffer.indexOf('\n');
     while (boundary !== -1) {
-      console.log(this.buffer.length)
       if (this.buffer.length > this.MAX_BUFFER_SIZE) {
         console.error(`Buffer overflow! Size: ${this.buffer.length}. TCP client disconnecting.`);
         this.disconnect();
