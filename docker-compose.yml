@@ -33,6 +33,15 @@ services:
       - influxdata:/var/lib/influxdb2
     ports:
       - "8086:8086"
+  
+  migrate:
+    build: .
+    command: npx prisma migrate dev --name init
+    depends_on:
+      - postgres
+    env_file: .env
+    profiles: ["dev"]
+  
 
 volumes:
   pgdata: {}

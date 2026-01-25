@@ -1,6 +1,7 @@
 import { query } from '../config/postgres.js';
 
 export async function getUsers() {
-  const res = await query('SELECT id, name, email, created_at FROM users ORDER BY id ASC');
-  return res.rows;
+  const sql = `SELECT id, first_name AS "firstName", last_name AS "lastName", email, created_at AS "createdAt" FROM users ORDER BY id ASC`;
+  const result = await query(sql);
+  return result.rows;
 }

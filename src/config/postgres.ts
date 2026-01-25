@@ -3,14 +3,9 @@ import { env } from './env.js';
 
 const pool = new Pool({ connectionString: env.postgresUrl });
 
+// Prisma is the source of truth for schema. This function is now a connectivity check.
 export async function initPostgres() {
-  const create = `CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-  );`;
-  await pool.query(create);
+  await pool.query('SELECT 1');
 }
 
 export async function query(text: string, params?: any[]) {
