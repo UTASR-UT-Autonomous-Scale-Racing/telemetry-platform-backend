@@ -7,6 +7,7 @@ import { initInflux } from './config/influx.js';
 import { notFoundHandler } from './middlewares/notFound.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { requestLogger } from './middlewares/logger.js';
+import jetsonClient from './services/jetsonTcpClient.js';
 import './config/env.js';
 
 const PORT = Number(process.env.PORT || 8080);
@@ -36,6 +37,8 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
   });
+
+  jetsonClient.connect();
 }
 
 start().catch((err) => {

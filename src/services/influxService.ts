@@ -1,6 +1,7 @@
 import { Point, WriteApi, QueryApi } from '@influxdata/influxdb-client';
 import { getInfluxClient } from '../config/influx.js';
 import { env } from '../config/env.js';
+import { TelemetryFrame } from '../validators/telementryValidator.js';
 
 let writeApi: WriteApi | null = null;
 let queryApi: QueryApi | null = null;
@@ -19,6 +20,30 @@ export async function writePoint({ deviceId, value }: { deviceId: string; value:
   writeApi!.writePoint(p);
   await writeApi!.close();
   writeApi = null; // allow recreation on next use
+}
+
+export function writeTelemetryFrame(frame: TelemetryFrame) {
+  ensureApis();
+  const point = new Point('telemetry')
+    .tag('sessionId', frame.sid)
+    .tag('vehicleId', frame.veh || 'unknown')
+    .timestamp(new Date(frame.t * 1000))
+
+  Object.entries(frame).forEach(([key, value]) => {
+    if (!['t', 'sid', 'veh'].includes(key) && typeof value === 'number') {
+      point.floatField(key, value);
+    }
+  });
+  
+  writeApi!.writePoint(point);
+} 
+
+export async function closeInfluxWriter() {
+  if (writeApi) {
+    await writeApi.flush(true);
+    await writeApi.close();
+    writeApi = null;
+  }
 }
 
 export async function queryRange(flux: string) {
