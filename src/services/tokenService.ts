@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { query } from '../config/postgres.js';
 import { env } from '../config/env.js';
@@ -78,6 +79,5 @@ export async function isRevokedToken(raw: string): Promise<boolean> {
 export function generateAccessToken(userId: number, role: string): string {
   const secret = env.jwtSecret;
   const ttl = env.accessTokenTtl;
-  const jwt = require('jsonwebtoken');
   return jwt.sign({ id: userId, role }, secret, { expiresIn: ttl });
 }

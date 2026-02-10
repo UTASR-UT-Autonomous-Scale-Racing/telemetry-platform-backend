@@ -1,113 +1,51 @@
-// Validation Logic for validating frames the is recived by the TCP client
+// Validation Logic for validating frames received by the HTTP endpoint
 
-// Schema for a frame
-interface TelemetryFrame {
-  t: number;
-  sid: string;
-  veh?: string;
-  s?: number;
-  thr?: number;
-  br?: number;
-  x?: number;
-  y?: number;
-  hdg?: number;
+// Schema for the new telemetry payload
+interface TelemetryPayload {
+  vehicle_id: string;
+  timestamp: number;
+  pose?: {
+    x: number;
+    z: number;
+  };
+  trajectory?: number[][];
+  control?: {
+    steering: number;
+    throttle: number;
+  };
+  track?: {
+    outer: number[][];
+    inner: number[][];
+  };
   serverReceiveTime?: number;
 }
 
 interface ValidateResult {
   valid: boolean;
-  frame?: TelemetryFrame;
+  payload?: TelemetryPayload;
   error?: string;
 }
 
 const MAX_SKEW_SECONDS = 10;
 
-function parseAndValidateFrame(frame: string): ValidateResult {
-  let parsedData;
-
-  // Try parsing data
-  try {
-    parsedData = JSON.parse(frame);
-  } catch (err) {
-    return {
-      valid: false,
-      error: `JSON parse error: ${err}`,
-    };
-  }
-
-  // Check if the data is correct in the first place
-  if (!parsedData || typeof parsedData !== 'object') {
-    return { valid: false, error: 'Frame must be an object' };
+function validateHttpTelemetry(data: any): ValidateResult {
+  // Check if the data is an object
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Payload must be an object' };
   }
 
   // Required Fields
-  if (typeof parsedData.t !== 'number') {
-    return {
-      valid: false,
-      error: `Frame contains missing or invalid t field`,
-    };
+  if (typeof data.vehicle_id !== 'string') {
+    return { valid: false, error: 'Missing or invalid vehicle_id' };
   }
 
-  if (typeof parsedData.sid !== 'string') {
-    return {
-      valid: false,
-      error: `Frame contains missing or invalid sid field`,
-    };
+  if (typeof data.timestamp !== 'number') {
+    return { valid: false, error: 'Missing or invalid timestamp' };
   }
 
-  // Optional Fields
-  if (parsedData.veh && typeof parsedData.veh !== 'string') {
-    return {
-      valid: false,
-      error: `Frame contains invalid veh field`,
-    };
-  }
-
-  if (parsedData.s && typeof parsedData.s !== 'number') {
-    return {
-      valid: false,
-      error: `Frame contains invalid s field`,
-    };
-  }
-
-  if (parsedData.thr && typeof parsedData.thr !== 'number') {
-    return {
-      valid: false,
-      error: `Frame contains invalid thr field`,
-    };
-  }
-
-  if (parsedData.br && typeof parsedData.br !== 'number') {
-    return {
-      valid: false,
-      error: `Frame contains invalid br field`,
-    };
-  }
-
-  if (parsedData.x && typeof parsedData.x !== 'number') {
-    return {
-      valid: false,
-      error: `Frame contains invalid x field`,
-    };
-  }
-
-  if (parsedData.y && typeof parsedData.y !== 'number') {
-    return {
-      valid: false,
-      error: `Frame contains invalid y field`,
-    };
-  }
-
-  if (parsedData.hdg && typeof parsedData.hdg !== 'number') {
-    return {
-      valid: false,
-      error: `Frame contains invalid hdg field`,
-    };
-  }
-
-  // Reject frames where |t_now − t| exceeds a defined skew threshold (e.g., 10 s).
+  // Validate Timestamp Skew
   const t_now = Date.now() / 1000;
-  const skew = Math.abs(t_now - parsedData.t);
+  const skew = Math.abs(t_now - data.timestamp);
 
   if (skew > MAX_SKEW_SECONDS) {
     return {
@@ -116,10 +54,34 @@ function parseAndValidateFrame(frame: string): ValidateResult {
     };
   }
 
+  // Validate Optional Nested Structures (Basic Type Checks)
+  if (data.pose) {
+    if (typeof data.pose.x !== 'number' || typeof data.pose.z !== 'number') {
+      return { valid: false, error: 'Invalid pose structure' };
+    }
+  }
+
+  if (data.control) {
+    if (typeof data.control.steering !== 'number' || typeof data.control.throttle !== 'number') {
+      return { valid: false, error: 'Invalid control structure' };
+    }
+  }
+
+  // Pass through remaining optional arrays (trajectory, track) without deep validation for performance,
+  // or add deeper validation if strictness is required. For now, we assume they are arrays if present.
+  if (data.trajectory && !Array.isArray(data.trajectory)) {
+      return { valid: false, error: 'Invalid trajectory format' };
+  }
+  
+  if (data.track) {
+      if (data.track.outer && !Array.isArray(data.track.outer)) return { valid: false, error: 'Invalid track outer boundary' };
+      if (data.track.inner && !Array.isArray(data.track.inner)) return { valid: false, error: 'Invalid track inner boundary' };
+  }
+
   return {
     valid: true,
-    frame: parsedData as TelemetryFrame,
+    payload: data as TelemetryPayload,
   };
 }
 
-export { TelemetryFrame, ValidateResult, parseAndValidateFrame };
+export { TelemetryPayload, ValidateResult, validateHttpTelemetry };

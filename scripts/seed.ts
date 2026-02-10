@@ -4,6 +4,17 @@ import '../src/config/env.js';
 
 export async function seed() {
   console.log('Starting seed...');
+  
+  await query(`CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'VIEWER',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+  );`);
+
   await query(`CREATE TABLE IF NOT EXISTS refresh_tokens (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

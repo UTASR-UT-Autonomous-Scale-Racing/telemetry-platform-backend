@@ -1,7 +1,7 @@
 import { Point, WriteApi, QueryApi } from '@influxdata/influxdb-client';
 import { getInfluxClient } from '../config/influx.js';
 import { env } from '../config/env.js';
-import { TelemetryFrame } from '../validators/telementryValidator.js';
+import { TelemetryPayload } from '../validators/telementryValidator.js';
 
 let writeApi: WriteApi | null = null;
 let queryApi: QueryApi | null = null;
@@ -22,18 +22,23 @@ export async function writePoint({ deviceId, value }: { deviceId: string; value:
   writeApi = null; // allow recreation on next use
 }
 
-export function writeTelemetryFrame(frame: TelemetryFrame) {
+export function writeTelemetryPayload(payload: TelemetryPayload) {
   ensureApis();
   const point = new Point('telemetry')
-    .tag('sessionId', frame.sid)
-    .tag('vehicleId', frame.veh || 'unknown')
-    .timestamp(new Date(frame.t * 1000))
+    .tag('vehicle_id', payload.vehicle_id)
+    .timestamp(new Date(payload.timestamp * 1000));
 
-  Object.entries(frame).forEach(([key, value]) => {
-    if (!['t', 'sid', 'veh'].includes(key) && typeof value === 'number') {
-      point.floatField(key, value);
-    }
-  });
+  // Flatten pose
+  if (payload.pose) {
+    point.floatField('pose_x', payload.pose.x);
+    point.floatField('pose_z', payload.pose.z);
+  }
+
+  // Flatten control
+  if (payload.control) {
+    point.floatField('steering', payload.control.steering);
+    point.floatField('throttle', payload.control.throttle);
+  }
   
   writeApi!.writePoint(point);
 } 
