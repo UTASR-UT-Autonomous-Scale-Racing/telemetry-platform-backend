@@ -1,4 +1,4 @@
-import { Point, WriteApi, QueryApi } from '@influxdata/influxdb-client';
+import { Point, WriteApi, QueryApi, FluxTableMetaData } from '@influxdata/influxdb-client';
 import { getInfluxClient } from '../config/influx.js';
 import { env } from '../config/env.js';
 import { TelemetryPayload } from '../validators/telementryValidator.js';
@@ -53,11 +53,11 @@ export async function closeInfluxWriter() {
 
 export async function queryRange(flux: string) {
   ensureApis();
-  const rows: any[] = [];
+  const rows: Record<string, unknown>[] = [];
   await new Promise<void>((resolve, reject) => {
     try {
       queryApi!.queryRows(flux, {
-        next: (row: string[], tableMeta: any) => {
+        next: (row: string[], tableMeta: FluxTableMetaData) => {
           const obj = tableMeta.toObject(row);
           rows.push(obj);
         },

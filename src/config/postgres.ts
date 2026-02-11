@@ -8,7 +8,7 @@ export async function initPostgres() {
   await pool.query('SELECT 1');
 }
 
-export async function query(text: string, params?: any[]) {
+export async function query(text: string, params?: unknown[]) {
   const res = await pool.query(text, params);
   return res;
 }

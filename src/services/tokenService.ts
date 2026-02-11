@@ -26,13 +26,6 @@ function hashToken(raw: string): string {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a);
-  const bBuf = Buffer.from(b);
-  if (aBuf.length !== bBuf.length) return false;
-  return crypto.timingSafeEqual(aBuf, bBuf);
-}
-
 export async function createRefreshToken(userId: number): Promise<{ refreshToken: string; expiresAt: Date }> {
   const raw = crypto.randomBytes(48).toString('base64url');
   const tokenHash = hashToken(raw);
@@ -78,6 +71,6 @@ export async function isRevokedToken(raw: string): Promise<boolean> {
 
 export function generateAccessToken(userId: number, role: string): string {
   const secret = env.jwtSecret;
-  const ttl = env.accessTokenTtl;
+  const ttl = env.accessTokenTtl as jwt.SignOptions['expiresIn'];
   return jwt.sign({ id: userId, role }, secret, { expiresIn: ttl });
 }

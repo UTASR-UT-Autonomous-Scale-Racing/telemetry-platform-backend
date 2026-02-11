@@ -28,11 +28,13 @@ interface ValidateResult {
 
 const MAX_SKEW_SECONDS = 10;
 
-function validateHttpTelemetry(data: any): ValidateResult {
-  // Check if the data is an object
-  if (!data || typeof data !== 'object') {
+function validateHttpTelemetry(input: unknown): ValidateResult {
+  // Check if the input is an object
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return { valid: false, error: 'Payload must be an object' };
   }
+
+  const data = input as Partial<TelemetryPayload>;
 
   // Required Fields
   if (typeof data.vehicle_id !== 'string') {

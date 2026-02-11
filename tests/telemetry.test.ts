@@ -1,12 +1,14 @@
 import { postTelemetry } from '../src/controllers/telemetryController.js';
 import * as influxService from '../src/services/influxService.js';
 import { telemetryStreamService } from '../src/services/telemetryStreamService.js';
+import { Request, Response } from 'express';
 
 // Mock Res/Req
 const createMockRes = () => {
-  const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
+  const res = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+  } as unknown as Response;
   return res;
 };
 
@@ -25,7 +27,7 @@ describe('telemetryController', () => {
         sensors: { battery: 12.5 }
       };
 
-      const req: any = { body: payload };
+      const req = { body: payload } as unknown as Request;
       const res = createMockRes();
 
       const writeSpy = jest.spyOn(influxService, 'writeTelemetryPayload').mockImplementation(() => {});
@@ -39,7 +41,7 @@ describe('telemetryController', () => {
     });
 
     it('returns 400 for invalid data (missing vehicle_id)', async () => {
-      const req: any = { body: { timestamp: Date.now() / 1000 } };
+      const req = { body: { timestamp: Date.now() / 1000 } } as unknown as Request;
       const res = createMockRes();
 
       await postTelemetry(req, res);
@@ -49,7 +51,7 @@ describe('telemetryController', () => {
     });
 
     it('returns 400 for stale timestamp', async () => {
-      const req: any = { body: { vehicle_id: 'car_1', timestamp: 1000 } }; // Way in the past
+      const req = { body: { vehicle_id: 'car_1', timestamp: 1000 } } as unknown as Request; // Way in the past
       const res = createMockRes();
 
       await postTelemetry(req, res);
