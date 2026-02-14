@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { query } from '../config/postgres.js';
 import { env } from '../config/env.js';
@@ -23,13 +24,6 @@ function nowPlusSeconds(seconds: number): Date {
 
 function hashToken(raw: string): string {
   return crypto.createHash('sha256').update(raw).digest('hex');
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a);
-  const bBuf = Buffer.from(b);
-  if (aBuf.length !== bBuf.length) return false;
-  return crypto.timingSafeEqual(aBuf, bBuf);
 }
 
 export async function createRefreshToken(userId: number): Promise<{ refreshToken: string; expiresAt: Date }> {
@@ -77,7 +71,6 @@ export async function isRevokedToken(raw: string): Promise<boolean> {
 
 export function generateAccessToken(userId: number, role: string): string {
   const secret = env.jwtSecret;
-  const ttl = env.accessTokenTtl;
-  const jwt = require('jsonwebtoken');
+  const ttl = env.accessTokenTtl as jwt.SignOptions['expiresIn'];
   return jwt.sign({ id: userId, role }, secret, { expiresIn: ttl });
 }

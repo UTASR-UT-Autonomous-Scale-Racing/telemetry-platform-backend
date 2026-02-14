@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { validateBody } from '../src/middlewares/validate.js';
 
+import { Request, Response } from 'express';
+
 function mockRes() {
-  const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
+  const res = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+  } as unknown as Response;
   return res;
 }
 
@@ -13,7 +16,7 @@ describe('validateBody middleware', () => {
   const mw = validateBody(schema);
 
   it('passes valid body and mutates req.body', () => {
-    const req: any = { body: { name: 'John', age: 30 } };
+    const req = { body: { name: 'John', age: 30 } } as unknown as Request;
     const res = mockRes();
     const next = jest.fn();
     mw(req, res, next);
@@ -22,7 +25,7 @@ describe('validateBody middleware', () => {
   });
 
   it('passes Zod error to next for invalid body', () => {
-    const req: any = { body: { name: 'J', age: 0 } }; // too short name and age < 1
+    const req = { body: { name: 'J', age: 0 } } as unknown as Request; // too short name and age < 1
     const res = mockRes();
     const next = jest.fn();
     mw(req, res, next);

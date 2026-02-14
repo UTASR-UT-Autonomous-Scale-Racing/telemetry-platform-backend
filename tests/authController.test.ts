@@ -2,14 +2,17 @@ import { register, login } from '../src/controllers/authController.js';
 import * as authService from '../src/services/authService.js';
 import { UnauthorizedError } from '../src/errors/httpErrors.js';
 
+import { Request, Response } from 'express';
+
 // Minimal mock helpers for Express req/res/next
 function createMockRes() {
-  const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  res.send = jest.fn().mockReturnValue(res);
-  res.cookie = jest.fn().mockReturnValue(res);
-  return res as any;
+  const res = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+    send: jest.fn().mockReturnThis(),
+    cookie: jest.fn().mockReturnThis(),
+  } as unknown as Response;
+  return res;
 }
 
 describe('authController', () => {
@@ -19,9 +22,9 @@ describe('authController', () => {
 
   it('register: returns 201 and access token, sets cookie', async () => {
     const tokens = { accessToken: 'fake.jwt.token', refreshToken: 'fake.refresh.token' };
-    const spy = jest.spyOn(authService, 'registerUser').mockResolvedValue(tokens as any);
+    const spy = jest.spyOn(authService, 'registerUser').mockResolvedValue(tokens);
 
-    const req: any = {
+    const req = {
       body: {
         firstName: 'Ada',
         lastName: 'Lovelace',
@@ -29,7 +32,7 @@ describe('authController', () => {
         password: 'SecurePass123!',
         confirmPassword: 'SecurePass123!',
       },
-    };
+    } as unknown as Request;
     const res = createMockRes();
     const next = jest.fn();
 
@@ -46,7 +49,7 @@ describe('authController', () => {
     const err = new Error('DB down');
     jest.spyOn(authService, 'registerUser').mockRejectedValue(err);
 
-    const req: any = { body: { firstName: 'X', lastName: 'Y', email: 'x@y.com', password: 'p', confirmPassword: 'p' } };
+    const req = { body: { firstName: 'X', lastName: 'Y', email: 'x@y.com', password: 'p', confirmPassword: 'p' } } as unknown as Request;
     const res = createMockRes();
     const next = jest.fn();
 
@@ -58,9 +61,9 @@ describe('authController', () => {
 
   it('login: returns 200 and access token, sets cookie', async () => {
     const tokens = { accessToken: 'fake.jwt.token', refreshToken: 'fake.refresh.token' };
-    const spy = jest.spyOn(authService, 'loginUser').mockResolvedValue(tokens as any);
+    const spy = jest.spyOn(authService, 'loginUser').mockResolvedValue(tokens);
 
-    const req: any = { body: { email: 'ada@example.com', password: 'SecurePass123!' } };
+    const req = { body: { email: 'ada@example.com', password: 'SecurePass123!' } } as unknown as Request;
     const res = createMockRes();
     const next = jest.fn();
 
@@ -77,7 +80,7 @@ describe('authController', () => {
     const err = new UnauthorizedError('Invalid email or password');
     jest.spyOn(authService, 'loginUser').mockRejectedValue(err);
 
-    const req: any = { body: { email: 'ada@example.com', password: 'wrong' } };
+    const req = { body: { email: 'ada@example.com', password: 'wrong' } } as unknown as Request;
     const res = createMockRes();
     const next = jest.fn();
 

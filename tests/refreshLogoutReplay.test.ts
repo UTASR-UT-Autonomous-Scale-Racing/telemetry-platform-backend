@@ -1,32 +1,34 @@
 import { registerUser } from '../src/services/authService.js';
-import { verifyAndRotateRefreshToken, revokeRefreshToken, isRevokedToken } from '../src/services/tokenService.js';
+import { verifyAndRotateRefreshToken, isRevokedToken } from '../src/services/tokenService.js';
 import { refresh, logout } from '../src/controllers/authController.js';
-import { UnauthorizedError } from '../src/errors/httpErrors.js';
+import { Request, Response } from 'express';
 
 // In-memory fakes for Postgres
-const users: any[] = [];
-const refreshTokens: any[] = [];
+const users: Record<string, unknown>[] = [];
+const refreshTokens: Record<string, unknown>[] = [];
 
 jest.mock('../src/config/postgres.js', () => ({
-  query: jest.fn(async (sql: string, params: any[]) => {
+  query: jest.fn(async (sql: string, params: unknown[]) => {
     // Users
     if (/INSERT INTO users/i.test(sql)) {
       const id = users.length + 1;
       const [firstName, lastName, email, passwordHash, role] = params;
       const user = { id, first_name: firstName, last_name: lastName, email, password_hash: passwordHash, role };
       users.push(user);
-      return { rows: [{ id, role }], rowCount: 1 } as any;
+      return { rows: [user], rowCount: 1 };
     }
     if (/SELECT id, password_hash, role FROM users WHERE email = \$1/i.test(sql)) {
       const email = params[0];
       const user = users.find(u => u.email === email);
-      if (!user) return { rows: [], rowCount: 0 } as any;
-      return { rows: [{ id: user.id, password_hash: user.password_hash, role: user.role }], rowCount: 1 } as any;
+      if (!user) return { rows: [], rowCount: 0 };
+      const row = { id: user.id, password_hash: user.password_hash as string, role: user.role as string };
+      return { rows: [row], rowCount: 1 };
     }
     if (/SELECT role FROM users WHERE id = \$1/i.test(sql)) {
       const id = params[0];
       const user = users.find(u => u.id === id);
-      return { rows: user ? [{ role: user.role }] : [], rowCount: user ? 1 : 0 } as any;
+      const roleRow = user ? { role: user.role as string } : null;
+      return { rows: roleRow ? [roleRow] : [], rowCount: user ? 1 : 0 };
     }
 
     // Refresh tokens
@@ -34,34 +36,35 @@ jest.mock('../src/config/postgres.js', () => ({
       const [user_id, token_hash, expires_at] = params;
       const row = { id: refreshTokens.length + 1, user_id, token_hash, expires_at, revoked: false };
       refreshTokens.push(row);
-      return { rows: [], rowCount: 1 } as any;
+      return { rows: [], rowCount: 1 };
     }
     if (/SELECT id, user_id, token_hash, expires_at, revoked FROM refresh_tokens WHERE token_hash = \$1 LIMIT 1/i.test(sql)) {
       const token_hash = params[0];
       const row = refreshTokens.find(r => r.token_hash === token_hash);
-      return { rows: row ? [row] : [], rowCount: row ? 1 : 0 } as any;
+      return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
     }
     if (/SELECT revoked FROM refresh_tokens WHERE token_hash = \$1 LIMIT 1/i.test(sql)) {
       const token_hash = params[0];
       const row = refreshTokens.find(r => r.token_hash === token_hash);
-      return { rows: row ? [{ revoked: row.revoked }] : [], rowCount: row ? 1 : 0 } as any;
+      const rows = row ? [{ revoked: row.revoked }] : [];
+      return { rows, rowCount: row ? 1 : 0 };
     }
     if (/UPDATE refresh_tokens SET revoked = TRUE WHERE id = \$1/i.test(sql)) {
       const id = params[0];
       const row = refreshTokens.find(r => r.id === id);
       if (row) row.revoked = true;
-      return { rows: [], rowCount: row ? 1 : 0 } as any;
+      return { rows: [], rowCount: row ? 1 : 0 };
     }
     if (/UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = \$1/i.test(sql)) {
       const token_hash = params[0];
       const row = refreshTokens.find(r => r.token_hash === token_hash);
       if (row) row.revoked = true;
-      return { rows: [], rowCount: row ? 1 : 0 } as any;
+      return { rows: [], rowCount: row ? 1 : 0 };
     }
     if (/UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = \$1/i.test(sql)) {
       const user_id = params[0];
       refreshTokens.forEach(r => { if (r.user_id === user_id) r.revoked = true; });
-      return { rows: [], rowCount: 0 } as any;
+      return { rows: [], rowCount: 0 };
     }
 
     throw new Error('Unexpected SQL in mock: ' + sql);
@@ -70,12 +73,13 @@ jest.mock('../src/config/postgres.js', () => ({
 
 // Minimal Express response mock
 function createRes() {
-  const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  res.send = jest.fn().mockReturnValue(res);
-  res.cookie = jest.fn().mockReturnValue(res);
-  res.clearCookie = jest.fn().mockReturnValue(res);
+  const res = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+    send: jest.fn().mockReturnThis(),
+    cookie: jest.fn().mockReturnThis(),
+    clearCookie: jest.fn().mockReturnThis(),
+  } as unknown as Response;
   return res;
 }
 
@@ -101,7 +105,7 @@ describe('Refresh / Logout / Replay flow', () => {
   it('logout revokes refresh token so it cannot be reused', async () => {
     const { refreshToken } = await registerUser('C', 'D', 'c@d.e', 'StrongPass123!', 'VIEWER');
     // Call logout controller
-    const req: any = { body: { refreshToken } };
+    const req = { body: { refreshToken } } as unknown as Request;
     const res = createRes();
     const next = jest.fn();
     await logout(req, res, next);
@@ -113,12 +117,12 @@ describe('Refresh / Logout / Replay flow', () => {
 
   it('refresh controller issues new access token and rejects replay of old token', async () => {
     const { refreshToken } = await registerUser('E', 'F', 'e@f.g', 'StrongPass123!', 'TEAM');
-    const req: any = { body: { refreshToken }, cookies: {}, app: { locals: {} } };
+    const req = { body: { refreshToken }, cookies: {}, app: { locals: {} } } as unknown as Request;
     const res = createRes();
     const next = jest.fn();
     await refresh(req, res, next);
     expect(res.status).toHaveBeenCalledWith(200);
-    const payload = res.json.mock.calls[0][0];
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
     expect(payload.accessToken).toBeDefined();
     expect(res.cookie).toHaveBeenCalled();
     // Old token should now be revoked

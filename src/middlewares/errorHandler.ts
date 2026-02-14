@@ -16,7 +16,8 @@ function send(res: Response, status: number, body: ErrorBody) {
   res.status(status).json(body);
 }
 
-export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   // Default fallback
   let status = 500;
   let type = 'InternalServerError';
@@ -54,14 +55,17 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
   }
 
   // Body parser / JSON parse errors
-  if (err && err.type === 'entity.parse.failed') {
+  if (err && typeof err === 'object' && (err as { type?: string }).type === 'entity.parse.failed') {
     return send(res, 400, { error: { type: 'InvalidJson', message: 'Malformed JSON body' } });
   }
 
   // Fallback to provided status/message if present
-  if (err && typeof err.status === 'number') status = err.status;
-  if (err && typeof err.message === 'string') message = err.message;
-  if (err && typeof err.name === 'string') type = err.name;
+  if (err && typeof err === 'object') {
+    const e = err as { status?: number; message?: string; name?: string };
+    if (typeof e.status === 'number') status = e.status;
+    if (typeof e.message === 'string') message = e.message;
+    if (typeof e.name === 'string') type = e.name;
+  }
 
   return send(res, status, { error: { type, message } });
 }

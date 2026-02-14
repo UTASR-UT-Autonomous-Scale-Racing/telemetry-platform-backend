@@ -12,6 +12,7 @@ export const env = {
   influxToken: process.env.INFLUX_TOKEN || 'dev-token',
   jetsonHost: process.env.JETSON_HOST || ' ',
   jetsonPort: process.env.JETSON_PORT || 5001,
+  jetsonApiSecret: process.env.JETSON_API_SECRET || 'dev-secret',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret',
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL || '15m',
   refreshTokenTtl: process.env.REFRESH_TOKEN_TTL || '7d'

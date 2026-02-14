@@ -1,6 +1,13 @@
 # Telemetry Platform Backend
 
-TypeScript (Node 20, ESM) Express API with PostgreSQL and InfluxDB. The API is protected with JWT-based authentication, role-based authorization (ADMIN, TEAM, VIEWER), short-lived access tokens, and HttpOnly cookie-based refresh tokens with rotation and revocation.
+TypeScript (Node 20, ESM) Express API for high-frequency vehicle telemetry.
+
+## Key Features
+
+- **Secure Telemetry Ingestion**: Secure HTTP push model from Jetson devices using API keys.
+- **Real-time Streaming**: Server-Sent Events (SSE) for low-latency dashboard updates.
+- **Robust Auth**: JWT-based authentication with HttpOnly cookie refresh token rotation.
+- **Persistence**: Hybrid storage using PostgreSQL (relational) and InfluxDB (time-series).
 
 ## Prerequisites
 
@@ -17,14 +24,15 @@ cp .env.example .env
 docker compose up --build -d
 
 # check containers
-docker compose ps
+
+[docker compose ps](http://localhost:8080)
 docker compose logs api --tail 100
 
 # verify health
-curl http://localhost:8080/api/v1/healthz
+curl <http://localhost:8080/api/v1/healthz>
 ```
 
-The API listens on http://localhost:8080 (routes are mounted at `/api/v1`).
+The API listens on <http://localhost:8080> (routes are mounted at `/api/v1`).
 
 ## Local development (without Docker for the API)
 
@@ -50,14 +58,14 @@ npm run dev
 
 ## Project structure
 
-```
+```text
 src/
-	config/        # env + db clients
-	controllers/   # route handlers
-	middlewares/   # error handler, request logging
-	routes/        # express router
-	services/      # postgres/influx helpers
-	server.ts      # express app bootstrap
+  config/        # env + db clients
+  controllers/   # route handlers
+  middlewares/   # error handler, request logging
+  routes/        # express router
+  services/      # postgres/influx helpers
+  server.ts      # express app bootstrap
 tests/           # jest tests
 ```
 
@@ -67,21 +75,23 @@ Copy `.env.example` to `.env` and adjust as needed (use placeholders here; see `
 
 See `.env.example` for dev defaults. Important variables:
 
-```
+```text
 NODE_ENV=development
 PORT=8080
 POSTGRES_URL=postgres://app:app@postgres:5432/app
-INFLUX_URL=http://influxdb:8086
+INFLUX_URL=http://localhost:8086
 INFLUX_ORG=app-org
 INFLUX_BUCKET=telemetry
 INFLUX_TOKEN=dev-token
 CORS_ORIGIN=http://localhost:8081
+
 JWT_SECRET=<long-random-secret>
 ACCESS_TOKEN_TTL=15m
 REFRESH_TOKEN_TTL=7d
 ```
 
 Notes:
+
 - Inside Docker Compose, the hostnames `postgres` and `influxdb` resolve to their containers.
 - If you run the API directly on your host, change those hostnames to `localhost` for locally running DBs.
 - `.env` is gitignored and must never be committed. `.env.example` contains dev-friendly defaults that match `docker-compose.yml` (e.g., Postgres `app/app` and Influx token `dev-token`) for local development only — replace with strong values in any non-dev environment.
@@ -94,8 +104,8 @@ Notes:
   "build": "tsc -p tsconfig.json",
   "start": "node dist/server.js",
   "lint": "eslint . --ext .ts",
-	"test": "jest",
-	"seed": "tsx scripts/seed.ts"
+  "test": "jest",
+  "seed": "tsx scripts/seed.ts"
 }
 ```
 
@@ -103,9 +113,11 @@ Notes:
 
 - Access token: short-lived JWT returned in JSON on register/login/refresh.
 - Refresh token: long-lived, stored as an HttpOnly cookie (not readable by JavaScript), rotated on each refresh.
-	- Cookie attributes: `httpOnly`, `secure` in production, `sameSite='strict'`, `path='/api/v1/auth/refresh'`.
+
+- Cookie attributes: `httpOnly`, `secure` in production, `sameSite='strict'`, `path='/api/v1/auth/refresh'`.
 
 Roles:
+
 - ADMIN: full access
 - TEAM: elevated non-admin actions
 - VIEWER: default read-only
@@ -129,10 +141,10 @@ Request validation uses Zod (see `src/schemas/authSchemas.ts`).
 
 Mount path reminder: these are available at `/api/v1/...`.
 
-- GET `/healthz` → `{ status: "ok", uptime, version }`
-- GET `/metrics` → plain text placeholder
+- GET `/healthz` → health check
+- POST `/telemetry` → protected via `x-api-key` (Jetson ingestion)
+- GET `/telemetry/stream` → protected via `auth` (SSE stream for frontend)
 - GET `/users` → returns rows from Postgres `users` table
-- POST `/telemetry` → validates JSON body and writes a point to InfluxDB
 
 ### Examples (PowerShell)
 
@@ -157,23 +169,25 @@ curl -Method POST http://localhost:8080/api/v1/auth/refresh
 ### Examples (bash)
 
 ```bash
-curl http://localhost:8080/api/v1/healthz
-curl -X POST http://localhost:8080/api/v1/register -H "Content-Type: application/json" -d '{"firstName":"Ada","lastName":"Lovelace","email":"ada@example.com","password":"SecurePass123!","confirmPassword":"SecurePass123!","role":"VIEWER"}'
-curl -X POST http://localhost:8080/api/v1/login -H "Content-Type: application/json" -d '{"email":"ada@example.com","password":"SecurePass123!"}'
+curl <http://localhost:8080/api/v1/healthz>
+curl -X POST <http://localhost:8080/api/v1/register> -H "Content-Type: application/json" -d '{"firstName":"Ada","lastName":"Lovelace","email":"ada@example.com","password":"SecurePass123!","confirmPassword":"SecurePass123!","role":"VIEWER"}'
+curl -X POST <http://localhost:8080/api/v1/login> -H "Content-Type: application/json" -d '{"email":"ada@example.com","password":"SecurePass123!"}'
 ACCESS_TOKEN="<paste>"
-curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8080/api/v1/users
-curl -X POST http://localhost:8080/api/v1/auth/refresh -c cookies.txt -b cookies.txt
+curl -H "Authorization: Bearer $ACCESS_TOKEN" <http://localhost:8080/api/v1/users>
+curl -X POST <http://localhost:8080/api/v1/auth/refresh> -c cookies.txt -b cookies.txt
 ```
 
 ## Docker services
 
+```text
 - api: Node 20, builds the TypeScript app and listens on 8080
 - postgres: Postgres 15 with database `app` and user `app`/`app`
 - influxdb: InfluxDB 2.7 with org `app-org`, bucket `telemetry`, token `dev-token`
+```
 
 Persistent volumes:
 
-```
+```text
 pgdata:      # Postgres data
 influxdata:  # InfluxDB 2 data
 ```

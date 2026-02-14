@@ -1,8 +1,6 @@
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/postgres.js';
 import { UnauthorizedError } from "../errors/httpErrors.js";
-import { env } from "../config/env.js"
 import { createRefreshToken, generateAccessToken } from './tokenService.js';
 export async function registerUser(
     firstName: string,

@@ -81,7 +81,7 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
 
 export async function revokeAll(req: Request, res: Response, next: NextFunction) {
     try {
-        const user = (res.locals as any).user;
+        const user = (res.locals as { user?: { id: number; role: string } }).user;
         if (!user?.id) return res.status(401).json({ message: 'Unauthorized' });
         await revokeAllUserTokens(user.id);
         res.clearCookie('refreshToken', { path: '/api/v1/auth/refresh' });
